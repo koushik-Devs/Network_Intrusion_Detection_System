@@ -3,14 +3,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+from pathlib import Path
+from sklearn.preprocessing import OrdinalEncoder, StandardScaler
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 
 # ---------- 1. Load Dataset ----------
-train_data = pd.read_csv("data/KDDTrain+.txt", header=None)
-test_data = pd.read_csv("data/KDDTest+.txt", header=None)
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+MODEL_DIR = BASE_DIR / "models"
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+train_data = pd.read_csv(DATA_DIR / "KDDTrain+.txt", header=None)
+test_data = pd.read_csv(DATA_DIR / "KDDTest+.txt", header=None)
 
 # ---------- 2. Assign Column Names ----------
 col_names = [
@@ -39,10 +44,10 @@ cat_cols = ['protocol_type', 'service', 'flag']
 encoders = {}
 
 for col in cat_cols:
-    le = LabelEncoder()
-    train_data[col] = le.fit_transform(train_data[col])
-    test_data[col] = le.transform(test_data[col])
-    encoders[col] = le
+    encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
+    train_data[[col]] = encoder.fit_transform(train_data[[col]])
+    test_data[[col]] = encoder.transform(test_data[[col]])
+    encoders[col] = encoder
 
 # ---------- 5. Feature Selection ----------
 X_train = train_data.drop(['label', 'difficulty', 'binary_label'], axis=1)
@@ -60,7 +65,7 @@ svm = SVC(kernel='rbf', C=1.0, gamma='scale')
 svm.fit(X_train, y_train)
 
 # ---------- 8. Save Trained Model ----------
-joblib.dump(svm, 'models/svm_model.pkl')
+joblib.dump(svm, MODEL_DIR / "svm_model.pkl")
 
 # ---------- 9. Evaluate Model ----------
 y_pred = svm.predict(X_test)
